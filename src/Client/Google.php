@@ -34,25 +34,9 @@ class Google extends OAuth2
         $tokenParams = $token->getParams();
 
         /**
-         * e.g. convert the above key, namely '{all the params}', into an array
-         * @var array $tokenArray
-         */
-        $tokenArray = array_keys($tokenParams);
-
-        /**
-         * @var string $jsonString
-         */
-        $jsonString = $tokenArray[0];
-
-        /**
-         * @var array $finalArray
-         */
-        $finalArray = json_decode($jsonString, true);
-
-        /**
          * @var string $tokenString
          */
-        $tokenString = $finalArray['access_token'] ?? '';
+        $tokenString = $tokenParams['access_token'] ?? '';
 
         if ($tokenString !== '') {
             $url = sprintf(
@@ -79,7 +63,7 @@ class Google extends OAuth2
         return [];
     }
 
-    protected function initUserAttributes(): array
+    public function initUserAttributes(): array
     {
         $token = $this->getAccessToken();
         if ($token instanceof OAuthToken) {

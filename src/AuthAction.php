@@ -11,12 +11,15 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Throwable;
-use Yiisoft\Aliases\Aliases;
+use Yiisoft\Arrays\ArrayHelper;
 use Yiisoft\Http\Status;
 use Yiisoft\View\Exception\ViewNotFoundException;
-use Yiisoft\View\WebView;
+use Yiisoft\Yii\AuthClient\AuthClientInterface;
+use Yiisoft\Yii\AuthClient\Collection;
 use Yiisoft\Yii\AuthClient\Exception\InvalidConfigException;
 use Yiisoft\Yii\AuthClient\Exception\NotSupportedException;
+use Yiisoft\Yii\AuthClient\OAuth2;
+use Yiisoft\Yii\View\Renderer\ViewRenderer;
 
 /**
  * AuthAction performs authentication via different auth clients.
@@ -121,9 +124,8 @@ final class AuthAction implements MiddlewareInterface
          * It should point to {@see Collection} instance.
          */
         private readonly Collection $clientCollection,
-        private readonly Aliases $aliases,
-        private readonly WebView $view,
-        private readonly ResponseFactoryInterface $responseFactory
+        private readonly ResponseFactoryInterface $responseFactory,
+        private ViewRenderer $viewRenderer,
     ) {
     }
 
@@ -151,14 +153,41 @@ final class AuthAction implements MiddlewareInterface
         return $new;
     }
 
+    /**
+     * @param callable $callback callback for successful authentication.
+     *
+     * @return AuthAction
+     */
+    public function withSuccessCallback(callable $callback): self
+    {
+        $new = clone $this;
+        $new->successCallback = $callback;
+        return $new;
+    }
+
+    /**
+     * @param callable $callback callback for canceled authentication.
+     *
+     * @return AuthAction
+     */
+    public function withCancelCallback(callable $callback): self
+    {
+        $new = clone $this;
+        $new->cancelCallback = $callback;
+        return $new;
+    }
+
     #[\Override]
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $clientId = (string)$request->getAttribute($this->clientIdGetParamName);
+        $clientId = (string)ArrayHelper::getValue($request->getQueryParams(), $this->clientIdGetParamName);
         if (strlen($clientId) > 0) {
             if (!$this->clientCollection->hasClient($clientId)) {
                 return $this->responseFactory->createResponse(Status::NOT_FOUND, "Unknown auth client '{$clientId}'");
             }
+            /**
+             * @var AuthClientInterface
+             */
             $client = $this->clientCollection->getClient($clientId);
 
             return $this->auth($client, $request);
@@ -227,7 +256,7 @@ final class AuthAction implements MiddlewareInterface
         if (isset($queryParams['code']) && (strlen($code = (string)$queryParams['code']) > 0)) {
             $token = $client->fetchAccessToken($request, $code);
             if (strlen((string) $token->getToken()) > 0) {
-                return $this->authSuccess($client);
+                return $this->authSuccess($client, $token);
             }
             return $this->authCancel($client);
         }
@@ -251,7 +280,7 @@ final class AuthAction implements MiddlewareInterface
     {
         if (!is_callable($this->cancelCallback)) {
             throw new InvalidConfigException(
-                '"' . self::class . '::$successCallback" should be a valid callback.'
+                '"' . self::class . '::$cancelCallback" should be a valid callback.'
             );
         }
         /**
@@ -280,39 +309,7 @@ final class AuthAction implements MiddlewareInterface
         if ($url === null) {
             $url = $this->cancelUrl;
         }
-        return $this->redirect($url, false);
-    }
-
-    /**
-     * Redirect to the given URL or simply close the popup window.
-     *
-     * @param string $url URL to redirect, could be a string or array config to generate a valid URL.
-     * @param bool $enforceRedirect indicates if redirect should be performed even in case of popup window.
-     *
-     * @throws Throwable
-     * @throws ViewNotFoundException
-     *
-     * @return ResponseInterface response instance.
-     */
-    private function redirect(string $url, bool $enforceRedirect = true): ResponseInterface
-    {
-        $viewFile = $this->redirectView;
-        if ($viewFile === null) {
-            $viewFile = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . 'redirect.php';
-        } else {
-            $viewFile = $this->aliases->get($viewFile);
-        }
-
-        $viewData = [
-            'url' => $url,
-            'enforceRedirect' => $enforceRedirect,
-        ];
-
-        $response = $this->responseFactory->createResponse();
-
-        $response->getBody()->write($this->view->render($viewFile, $viewData));
-
-        return $response;
+        return $this->viewRenderer->render($url);
     }
 
     /**
@@ -360,6 +357,6 @@ final class AuthAction implements MiddlewareInterface
         if ($url === null) {
             $url = $this->successUrl;
         }
-        return $this->redirect($url);
+        return $this->viewRenderer->render($url);
     }
 }

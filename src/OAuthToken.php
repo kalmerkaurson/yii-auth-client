@@ -12,7 +12,7 @@ final class OAuthToken
     /**
      * @var string key in {@see params} array, which stores token key.
      */
-    private string $tokenParamKey = 'oauth_token';
+    private string $tokenParamKey = 'access_token';
     /**
      * @var string key in {@see params} array, which stores token secret key.
      */
@@ -56,6 +56,16 @@ final class OAuthToken
     public function setToken(string $token): void
     {
         $this->setParam($this->tokenParamKey ?: 'oauth_token', $token);
+    }
+
+    /**
+     * Sets token param key value.
+     *
+     * @param string $key token param key value.
+     */
+    public function setTokenParamKey(string $key): void
+    {
+        $this->tokenParamKey = $key;
     }
 
     /**
