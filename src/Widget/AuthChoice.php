@@ -170,10 +170,10 @@ final class AuthChoice extends Widget
          * @var OAuth2 $externalService
          */
         foreach ($this->getClients() as $externalService) {
-            $items[] = Html::tag('li', $this->clientLink($externalService));
+            $items[] = Html::tag('li', $this->clientLink($externalService))->encode(false);
         }
 
-        return Html::tag('ul', implode('', $items), ['class' => 'auth-clients'])->render();
+        return Html::tag('ul', implode('', $items), ['class' => 'auth-clients'])->encode(false)->render();
     }
 
     /**
@@ -221,13 +221,13 @@ final class AuthChoice extends Widget
      *
      * @return string generated HTML.
      */
-    public function clientLink(OAuth2 $client, string $text = null, array $htmlOptions = []): string
+    public function clientLink(OAuth2 $client, ?string $text = null, array $htmlOptions = []): string
     {
         $viewOptions = $client->getViewOptions();
 
         if (empty($viewOptions['widget'])) {
             if ($text === null) {
-                $text = Html::tag('span', '', ['class' => 'auth-icon ' . $client->getName()])->render();
+                $text = Html::tag('span', '', ['class' => 'auth-icon ' . $client->getName()])->encode(false)->render();
             }
             if (!isset($htmlOptions['class'])) {
                 $htmlOptions['class'] = $client->getName();
@@ -254,7 +254,7 @@ final class AuthChoice extends Widget
                 }
             }
 
-            return Html::a($text, $this->createClientUrl($client), $htmlOptions)->render();
+            return Html::a($text, $this->createClientUrl($client), $htmlOptions)->encode(false)->render();
         }
 
         $widgetConfig = (array)$viewOptions['widget'];

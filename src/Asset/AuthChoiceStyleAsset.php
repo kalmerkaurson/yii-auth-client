@@ -15,7 +15,7 @@ class AuthChoiceStyleAsset extends AssetBundle
 
     public ?string $baseUrl = '@assetsUrl';
 
-    public ?string $sourcePath = '@vendor/yiisoft/yii-auth-client/resources/assets';
+    public ?string $sourcePath = __DIR__ . '/../../resources/assets';
 
     /**
      * @psalm-suppress NonInvariantDocblockPropertyType $css
