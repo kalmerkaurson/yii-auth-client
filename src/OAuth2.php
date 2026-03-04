@@ -169,6 +169,7 @@ abstract class OAuth2 extends OAuth
 
         $defaultParams = [
             'code' => $authCode,
+            'grant_type' => 'authorization_code',
             'redirect_uri' => $this->getOauth2ReturnUrl(),
         ];
 
@@ -177,7 +178,12 @@ abstract class OAuth2 extends OAuth
         $request = $this->applyClientCredentialsToRequest($request);
         $response = $this->sendRequest($request);
         $contents = $response->getBody()->getContents();
-        $output = $this->parse_str_clean($contents);
+        $output = [];
+
+        if (strlen($contents) > 0) {
+            $output = (array) json_decode($contents, true);
+        }
+
         $token = new OAuthToken();
         /**
          * @var string $key
@@ -186,6 +192,8 @@ abstract class OAuth2 extends OAuth
         foreach ($output as $key => $value) {
             $token->setParam($key, $value);
         }
+        $this->setAccessToken($token);
+
         return $token;
     }
 
@@ -289,20 +297,6 @@ abstract class OAuth2 extends OAuth
                 'client_secret' => $this->clientSecret,
             ]
         );
-    }
-
-    /**
-     * Creates token from its configuration.
-     *
-     * @param array $tokenConfig token configuration.
-     * @return OAuthToken token instance.
-     */
-    #[\Override]
-    protected function createToken(array $tokenConfig = []): OAuthToken
-    {
-        $tokenConfig['tokenParamKey'] = 'access_token';
-
-        return parent::createToken($tokenConfig);
     }
 
     public function setClientId(string $clientId): void

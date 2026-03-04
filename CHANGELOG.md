@@ -2,4 +2,5 @@
 
 ## 1.1.0 under development
 
+- Fix google auth.
 - Initial release.
